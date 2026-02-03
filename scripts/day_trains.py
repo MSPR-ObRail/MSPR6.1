@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
-    col, lower, trim, regexp_replace, udf, lit, 
-    concat, first, last, when, coalesce, row_number
+    col, trim, udf, lit, 
+    concat, when, row_number
 )
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window

@@ -1,17 +1,15 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     col, trim, udf, lit, 
-    concat, when, row_number
-)
-from pyspark.sql.types import StringType
+    concat,  when, row_number)
+from pyspark.sql.types import StringType, DoubleType  
 from pyspark.sql.window import Window
+from math import radians, sin, cos, asin, sqrt
 import unicodedata
 import re
 import os
 
-# ----------------------------
 # CONFIGURATION
-# ----------------------------
 GTFS_DAY_FOLDERS = [
     "data/raw/day/Denmark/",
     "data/raw/day/Eurostar_international/",
@@ -54,9 +52,9 @@ STATION_COUNTRY_MAP = {
     "bourg st maurice": "FR",
 }
 
-# ----------------------------
+
 # Initialize Spark Session
-# ----------------------------
+
 def init_spark():
     """Initialize and return a Spark session"""
     spark = SparkSession.builder \
@@ -68,9 +66,9 @@ def init_spark():
     spark.sparkContext.setLogLevel("WARN")
     return spark
 
-# ----------------------------
-# UDF: Normalize station names
-# ----------------------------
+
+# Normalize station names
+
 def normalize_text(name):
     """Normalize station name by removing accents and special characters"""
     if not name or name.strip() == "":
@@ -83,9 +81,8 @@ def normalize_text(name):
 
 normalize_udf = udf(normalize_text, StringType())
 
-# ----------------------------
+
 # UDF: Simplify station for dashboard
-# ----------------------------
 def simplify_station_text(name):
     """Simplify station name for dashboard display"""
     if not name or name.strip() == "":
@@ -112,9 +109,41 @@ def simplify_station_text(name):
 
 simplify_station_udf = udf(simplify_station_text, StringType())
 
-# ----------------------------
-# UDF: Resolve country from station name
-# ----------------------------
+# UDF: Haversine distance calculation
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    Returns distance in kilometers
+    """
+    # Handle None/null values
+    if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
+        return None
+    
+    try:
+        # Convert decimal degrees to radians
+        lat1, lon1, lat2, lon2 = map(float, [lat1, lon1, lat2, lon2])
+        lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+        
+        # Haversine formula
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+        c = 2 * asin(sqrt(a))
+        
+        # Radius of earth in kilometers
+        r = 6371
+        
+        return round(c * r, 2)
+    except (ValueError, TypeError):
+        return None
+
+# Register as UDF
+haversine_udf = udf(haversine_distance, DoubleType())
+
+# Resolve country from station name
+
 def resolve_country_from_station(station_normalized, folder_country):
     """Resolve country code from station name for cross-border routes"""
     if folder_country is not None and folder_country != "":
@@ -128,9 +157,8 @@ def resolve_country_from_station(station_normalized, folder_country):
 
 resolve_country_udf = udf(resolve_country_from_station, StringType())
 
-# ----------------------------
 # FUNCTION: Check if folder has required files
-# ----------------------------
+
 def check_required_files(folder):
     """Check which GTFS files are available in the folder"""
     files = os.listdir(folder) if os.path.exists(folder) else []
@@ -142,9 +170,9 @@ def check_required_files(folder):
         'has_stop_times': 'stop_times.txt' in files
     }
 
-# ----------------------------
-# FUNCTION: Extract routes from a GTFS folder using PySpark
-# ----------------------------
+
+# FUNCTION: Extracts routes from a GTFS folder using PySpark
+
 def extract_routes_pyspark(spark, folder, folder_country):
     """Extract routes from a GTFS folder using PySpark"""
     
@@ -205,9 +233,12 @@ def extract_routes_pyspark(spark, folder, folder_country):
             )
             
             first_stops = stop_times_with_rank.filter(col("rank") == 1) \
-                .select("trip_id", "stop_id") \
-                .join(stops.select("stop_id", col("stop_name").alias("origin_name")), 
-                      on="stop_id", how="left")
+            .select("trip_id", "stop_id") \
+            .join(stops.select("stop_id", 
+                            col("stop_name").alias("origin_name"),
+                            col("stop_lat").alias("origin_lat"),
+                            col("stop_lon").alias("origin_lon")), 
+                on="stop_id", how="left")
             
             # Get last stops
             window_spec_desc = Window.partitionBy("trip_id").orderBy(col("stop_sequence").desc())
@@ -216,9 +247,12 @@ def extract_routes_pyspark(spark, folder, folder_country):
             )
             
             last_stops = stop_times_with_rank_desc.filter(col("rank_desc") == 1) \
-                .select("trip_id", "stop_id") \
-                .join(stops.select("stop_id", col("stop_name").alias("destination_name")), 
-                      on="stop_id", how="left")
+            .select("trip_id", "stop_id") \
+            .join(stops.select("stop_id", 
+                            col("stop_name").alias("destination_name"),
+                            col("stop_lat").alias("dest_lat"),
+                            col("stop_lon").alias("dest_lon")), 
+                on="stop_id", how="left")
         
         else:
             # Case 2: Use start_stop_id and end_stop_id from trips.txt
@@ -240,15 +274,18 @@ def extract_routes_pyspark(spark, folder, folder_country):
                 how="left"
             )
         
-        # Join everything together
+        # Join trips with routes and stops to get origin/destination names
+        
         df = trips.join(
             routes.select("route_id", "route_short_name"), 
             on="route_id", 
             how="left"
         )
         
-        df = df.join(first_stops.select("trip_id", "origin_name"), on="trip_id", how="left")
-        df = df.join(last_stops.select("trip_id", "destination_name"), on="trip_id", how="left")
+        df = df.join(first_stops.select("trip_id", "origin_name", "origin_lat", "origin_lon"), 
+                    on="trip_id", how="left")
+        df = df.join(last_stops.select("trip_id", "destination_name", "dest_lat", "dest_lon"), 
+                    on="trip_id", how="left")
         
         # Filter out null or empty stations
         df = df.filter(
@@ -276,11 +313,25 @@ def extract_routes_pyspark(spark, folder, folder_country):
             ).otherwise(col("route_short_name"))
         )
         
+        # Calculate distance using Haversine formula
+        df = df.withColumn(
+            "distance_km",
+            haversine_udf(
+                col("origin_lat"),
+                col("origin_lon"),
+                col("dest_lat"),
+                col("dest_lon")
+            )
+        )
+        
+        # Remove routes with null distance
+        df = df.filter(col("distance_km").isNotNull())
+        
         # Deduplicate bidirectional routes
         df = df.withColumn(
             "station_pair",
             when(col("origin") < col("destination"),
-                 concat(col("origin"), lit("_"), col("destination")))
+                concat(col("origin"), lit("_"), col("destination")))
             .otherwise(concat(col("destination"), lit("_"), col("origin")))
         )
         
@@ -323,7 +374,8 @@ def extract_routes_pyspark(spark, folder, folder_country):
             "service_type",
             "route_name_simple",
             "origin_country",
-            "destination_country"
+            "destination_country",
+            "distance_km"
         )
         
         return result
@@ -334,9 +386,9 @@ def extract_routes_pyspark(spark, folder, folder_country):
         traceback.print_exc()
         return None
 
-# ----------------------------
+
 # MAIN SCRIPT
-# ----------------------------
+
 def main():
     """Main execution function"""
     
@@ -403,7 +455,7 @@ def main():
     
     # Stop Spark session
     spark.stop()
-    print("\n✅ Spark session stopped")
+    print("\n✅ Spark session finished")
 
 if __name__ == "__main__":
     main()

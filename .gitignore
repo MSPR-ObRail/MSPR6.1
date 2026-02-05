@@ -1,4 +1,6 @@
 .env
-/venv
-data/raw/
-.DS_Store
+
+venv/
+
+data/
+

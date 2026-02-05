@@ -1,48 +1,32 @@
-# ObRail Europe - ETL Pipeline
+EEA Dataset -  https://www.eea.europa.eu/en/datahub?q=transport%20emmisions&size=n_10_n&filters%5B0%5D%5Bfield%5D=issued.date&filters%5B0%5D%5Bvalues%5D%5B0%5D=All%20time&filters%5B0%5D%5Btype%5D=any
 
-A data pipeline for extracting, transforming, and analyzing European railway route data with CO2 emissions calculation.
+CO2 Data 
+https://github.com/owid/energy-data 
 
-## Overview
+GTFS Data for Denmark,
+https://eu.data.public-transport.earth/
 
-This project processes GTFS (General Transit Feed Specification) data from multiple European rail operators across day and night routes to calculate carbon emissions and generate insights.
+France SNCF Data
 
-## Features
+GTFS for Germany 
+https://unternehmen.vbb.de/digitale-services/datensaetze/
 
-- **Multi-country Data Support**: Denmark, France, Germany, Switzerland, and international services
-- **Day & Night Routes**: Separate pipelines for daytime and night train services
-- **CO2 Calculation**: Automatic emissions calculation for all routes
-- **Data Cleaning**: Automated data validation and transformation
-- **ETL Pipeline**: Modular extract, transform, load processes
+GTFS for Switzerland 
+https://gtfs.geops.ch/#feeds
 
-## Quick Start
+Night train data 
+OBB - https://data.oebb.at/de/datensaetze~streckennetz-nachtzuege~
 
-1. Install dependencies:
+LongDistance Rail Germany - https://gtfs.de/en/feeds/de_fv/
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+nighttrain GitHub - https://github.com/Back-on-Track-eu/night-train-data/tree/main
 
-2. Run the pipeline:
-   ```bash
-   python main.py
-   ```
+opendata - https://data.oebb.at/de/datensaetze~soll-fahrplan-gtfs~
 
-## Project Structure
+sncf - https://transport.data.gouv.fr/resources/67595?locale=en
 
-- **scripts/**: Data processing modules (calculate_co2.py, clean_routes.py, etc.)
-- **data/**: Raw and processed data files
-- **config/**: Configuration settings
-- **logs/**: Pipeline execution logs
+german railways - 
 
-## Data Sources
+# Unofficial Deutsche Bahn Fernverkehr (German Railways Long-Distance Trains) Timetable GTFS Feed For 2019
 
-- GTFS feeds from official European transport authorities
-- CO2 emission factors from EEA (European Environment Agency)
-- Includes Eurostar, SNCF, ÖBB, and regional operators
-
-## Technologies
-
-- Python 3.x
-- PySpark for large-scale data processing
-- Pandas for data manipulation
-- FastAPI for API endpoints
+From 2018-12-09 to 2019-12-14.

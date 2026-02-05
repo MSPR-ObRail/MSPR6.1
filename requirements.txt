@@ -3,6 +3,7 @@ pyspark>=3.5.0
 pandas>=2.1.0
 numpy>=1.26.0
 
+
 # --- DATABASE (PostgreSQL & Storage) ---
 # Psycopg2 is required for Python to talk to PostgreSQL
 psycopg2-binary>=2.9.9
@@ -14,8 +15,10 @@ uvicorn>=0.27.0
 pydantic>=2.5.0
 
 # --- DATA COLLECTION & UTILS ---
+openpyxl>=3.1.0        # For Excel file handling
 requests>=2.31.0       # For API data collection/scraping
 python-dotenv>=1.0.0    # For secure credentials (GDPR compliance)
+odfpy>=1.0.7            # For ODS file handling
 
 # --- VISUALIZATION (For Dashboard & Analysis) ---
 matplotlib>=3.8.0

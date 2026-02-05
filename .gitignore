@@ -1,6 +1,11 @@
+# Ignore environment variable files
 .env
 
+# virtual environment
 venv/
 
+# data files
 data/
 
+# compiled python files
+__pycache__/

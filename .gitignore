@@ -1,4 +1,11 @@
+# Ignore environment variable files
 .env
-/venv
-data/raw/
-.DS_Store
+
+# virtual environment
+venv/
+
+# data files
+data/
+
+# compiled python files
+__pycache__/

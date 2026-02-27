@@ -72,3 +72,18 @@ class RoutesByType(BaseModel):
     avg_distance_km: float
     total_savings_kg: float
     class Config: from_attributes = True
+
+# ========================================
+# DASHBOARD
+# ========================================
+
+# C'est ce que l'utilisateur verra dans son navigateur/dashboard
+class RouteSchema(BaseModel):
+    id: int
+    origin: str
+    destination: str
+    distance_km: float
+
+    class Config:
+        # C'est la magie qui permet de transformer un modèle SQLAlchemy en JSON
+        from_attributes = True

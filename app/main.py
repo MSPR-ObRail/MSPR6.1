@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from . import database, models
+from typing import List
+from . import database, models, schemas  
 
 # Initialisation de FastAPI
 app = FastAPI(
@@ -10,36 +11,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Endpoint "Health Check"
-@app.get("/health", tags=["System"])
-def health_check(db: Session = Depends(database.get_db)):
+# 1. Endpoint pour récupérer la liste complète des routes (format tableau)
+@app.get("/routes", response_model=List[schemas.FactRoute], tags=["Routes"])
+def get_routes(limit: int = 50, db: Session = Depends(database.get_db)):
     """
-    Vérifie si l'API est en ligne et connectée à la base de données.
+    Récupère la liste des routes avec les détails de CO2.
     """
-    try:
-        # On exécute une requête simple pour tester la connexion DB
-        db.execute(text("SELECT 1"))
-        return {
-            "status": "healthy",
-            "database": "connected"
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Database connection failed: {str(e)}"
-        )
+    return db.query(models.FactRoute).limit(limit).all()
 
-# Endpoint de test pour vérifier tes modèles (FactRoute)
-@app.get("/routes/count", tags=["Routes"])
-def get_routes_count(db: Session = Depends(database.get_db)):
+# 2. Endpoint pour le Dashboard (Statistiques générales)
+@app.get("/stats", response_model=schemas.SummaryStats, tags=["Dashboard"])
+def get_stats(db: Session = Depends(database.get_db)):
     """
-    Compte le nombre total de routes dans la table fact_routes.
+    Récupère les statistiques agrégées pour le dashboard de Samy.
     """
-    try:
-        count = db.query(models.FactRoute).count()
-        return {"total_routes": count}
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Error querying routes: {str(e)}"
-        )
+    # Note: Ici il faudra faire un calcul (ou query une vue SQL)
+    # Pour l'instant, on simule un retour avec des valeurs par défaut
+    # car le modèle SQLAlchemy doit être adapté pour les calculs.
+    return {
+        "total_routes": db.query(models.FactRoute).count(),
+        "countries_covered": 5, 
+        "avg_distance_km": 450.5,
+        "total_co2_saved_kg": 12000.0,
+        "total_co2_saved_tons": 12.0,
+        "avg_savings_percent": 15.5
+    }
